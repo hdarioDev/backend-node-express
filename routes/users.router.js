@@ -1,22 +1,73 @@
 const express = require('express')
-const { faker } = require('@faker-js/faker')
 
-const router = express.Router()
+const UserService = require('./../services/user.service');
+const validatorHandler = require('./../middlewares/validator.handler');
+const { updateUserSchema, createUserSchema, getUserSchema } = require('./../schemas/user.schema');
 
-//PARAMS QUERY
-router.get('/users', (req, res) => {
-  const { offset, limit } = req.query;
-  const result = [];
-  if (offset && limit) {
-    /* Los parámetros requperados de query,
-    vienen como string, es necesario pasarlos a int*/
-    for (let i = parseInt(offset); i < parseInt(limit); i++) {
-      result.push(initialDB.users[i]);
-    }
-    res.json(result);
-  } else {
-    res.send('No data found');
+const router = express.Router();
+const service = new UserService();
+
+router.get('/', async (req, res, next) => {
+  try {
+    const categories = await service.find();
+    res.json(categories);
+  } catch (error) {
+    next(error);
   }
 });
 
-module.exports = router
+router.get('/:id',
+  validatorHandler(getUserSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const category = await service.findOne(id);
+      res.json(category);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post('/',
+  validatorHandler(createUserSchema, 'body'),
+  async (req, res, next) => {
+    try {
+      const body = req.body;
+      const newCategory = await service.create(body);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.patch('/:id',
+  validatorHandler(getUserSchema, 'params'),
+  validatorHandler(updateUserSchema, 'body'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const body = req.body;
+      const category = await service.update(id, body);
+      res.json(category);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.delete('/:id',
+  validatorHandler(getUserSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      await service.delete(id);
+      res.status(201).json({ id });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+module.exports = router;
